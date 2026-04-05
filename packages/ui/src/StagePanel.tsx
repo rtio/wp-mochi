@@ -336,14 +336,16 @@ interface InteractResponse {
 	evolved: boolean;
 	previous_stage: Stage | null;
 	line: string;
-	source: 'stub' | 'anthropic' | 'openai';
+	source: 'stub' | 'anthropic' | 'openai' | 'ollama' | 'openrouter';
 }
 
 interface StateResponse {
 	state: PetState;
-	provider: 'anthropic' | 'openai';
+	provider: 'anthropic' | 'openai' | 'ollama' | 'openrouter';
 	anthropic_key_configured: boolean;
 	openai_key_configured: boolean;
+	openrouter_key_configured: boolean;
+	ollama_base_url: string;
 }
 
 export function StagePanel() {

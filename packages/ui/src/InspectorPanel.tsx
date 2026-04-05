@@ -3,15 +3,22 @@
  *
  * Settings:
  *   - Personality picker (auto-saves on change — affects live pet rendering)
- *   - AI provider picker (Anthropic / OpenAI)
- *   - API key entry per provider — write-only from the client's POV;
- *     the REST API exposes only a boolean "configured" status, never the key
+ *   - AI provider picker (Anthropic / OpenAI / Ollama / OpenRouter)
+ *   - Credentials per provider:
+ *       - Anthropic API key (password, write-only)
+ *       - OpenAI API key (password, write-only)
+ *       - OpenRouter API key (password, write-only)
+ *       - Ollama base URL (plain text — not a secret)
  *   - Show pet / Reset pet buttons
  *
- * Model selection is deliberately absent: the server always uses the
- * cheapest-tier model per provider (Haiku 4.5 for Anthropic, gpt-4o-mini
- * for OpenAI). For 120-token speech bubbles there's no realistic gain
- * from paying more. See includes/ai.php for the hardcoded model IDs.
+ * Model selection is deliberately absent. The server always uses the
+ * cheapest-tier model per provider (see includes/ai.php MODELS constant).
+ * For 120-token speech bubbles there's no realistic gain from paying more.
+ *
+ * Credential inputs are password fields for keys (write-only — only a
+ * boolean "configured" status is returned from the server, never the key
+ * itself) and a plain text field for the Ollama base URL (it's a URL,
+ * not a secret, and users benefit from seeing the current value).
  *
  * See docs/MIGRATION-TO-ROUTES.md — this component is unchanged between
  * classic and routes/ layouts.
@@ -29,19 +36,20 @@ const PERSONALITIES: Personality[] = [
 	'dramatic',
 ];
 
-type Provider = 'anthropic' | 'openai';
+type Provider = 'anthropic' | 'openai' | 'ollama' | 'openrouter';
 
+/**
+ * Displayed in the dropdown and used for the dynamic model-in-use note
+ * under it. Models mirror includes/ai.php MODELS — if you change the
+ * server-side default, change the label here too (there's no runtime
+ * wire from the server to keep these honest; it's a note for the user,
+ * and a discrepancy is a cosmetic bug at worst).
+ */
 const PROVIDERS: Array< { id: Provider; label: string; model: string } > = [
-	{
-		id: 'anthropic',
-		label: 'Anthropic (Claude)',
-		model: 'claude-haiku-4-5',
-	},
-	{
-		id: 'openai',
-		label: 'OpenAI (GPT)',
-		model: 'gpt-4o-mini',
-	},
+	{ id: 'anthropic',  label: 'Anthropic (Claude)', model: 'claude-haiku-4-5' },
+	{ id: 'openai',     label: 'OpenAI (GPT)',       model: 'gpt-4o-mini' },
+	{ id: 'ollama',     label: 'Ollama (local)',     model: 'llama3.2:3b' },
+	{ id: 'openrouter', label: 'OpenRouter',         model: 'deepseek/deepseek-chat' },
 ];
 
 interface StateResponse {
@@ -49,6 +57,8 @@ interface StateResponse {
 	provider: Provider;
 	anthropic_key_configured: boolean;
 	openai_key_configured: boolean;
+	openrouter_key_configured: boolean;
+	ollama_base_url: string;
 }
 
 interface SettingsResponse {
@@ -56,18 +66,30 @@ interface SettingsResponse {
 	provider: Provider;
 	anthropic_key_configured: boolean;
 	openai_key_configured: boolean;
+	openrouter_key_configured: boolean;
+	ollama_base_url: string;
 }
 
 export function InspectorPanel() {
-	const [ personality, setPersonality ] =
-		useState< Personality >( 'grumpy' );
+	const [ personality, setPersonality ] = useState< Personality >( 'grumpy' );
 	const [ provider, setProvider ] = useState< Provider >( 'anthropic' );
+
+	// Server-reported "configured" flags (read-only view of which providers
+	// already have keys stored). These drive the placeholder text on the
+	// corresponding inputs.
 	const [ anthropicKeyConfigured, setAnthropicKeyConfigured ] =
 		useState< boolean >( false );
 	const [ openaiKeyConfigured, setOpenaiKeyConfigured ] =
 		useState< boolean >( false );
+	const [ openrouterKeyConfigured, setOpenrouterKeyConfigured ] =
+		useState< boolean >( false );
+	const [ ollamaBaseUrl, setOllamaBaseUrl ] = useState< string >( '' );
+
+	// Local drafts — what the user has typed but not yet saved.
 	const [ anthropicKeyDraft, setAnthropicKeyDraft ] = useState< string >( '' );
 	const [ openaiKeyDraft, setOpenaiKeyDraft ] = useState< string >( '' );
+	const [ openrouterKeyDraft, setOpenrouterKeyDraft ] = useState< string >( '' );
+
 	const [ status, setStatus ] = useState< string >( '' );
 
 	useEffect( () => {
@@ -77,6 +99,8 @@ export function InspectorPanel() {
 				setProvider( res.provider );
 				setAnthropicKeyConfigured( res.anthropic_key_configured );
 				setOpenaiKeyConfigured( res.openai_key_configured );
+				setOpenrouterKeyConfigured( res.openrouter_key_configured );
+				setOllamaBaseUrl( res.ollama_base_url );
 			}
 		);
 	}, [] );
@@ -92,12 +116,17 @@ export function InspectorPanel() {
 	};
 
 	const saveApiSettings = async () => {
-		// Only send fields the user actually touched. Empty key drafts are
-		// ignored so clicking Save after only changing the provider doesn't
+		// Only send fields the user actually touched — empty drafts are
+		// skipped so clicking Save after only changing the provider doesn't
 		// clobber a previously-saved key with an empty string.
 		const data: Record< string, string > = { provider };
 		if ( anthropicKeyDraft ) data.anthropic_api_key = anthropicKeyDraft;
 		if ( openaiKeyDraft ) data.openai_api_key = openaiKeyDraft;
+		if ( openrouterKeyDraft ) data.openrouter_api_key = openrouterKeyDraft;
+		// Ollama base URL is always sent — it's readable from the server
+		// and the user might be intentionally clearing it to go back to
+		// the default. Empty string means "use the default".
+		data.ollama_base_url = ollamaBaseUrl;
 
 		const res = await apiFetch< SettingsResponse >( {
 			path: '/mochi/v1/settings',
@@ -108,17 +137,17 @@ export function InspectorPanel() {
 		setProvider( res.provider );
 		setAnthropicKeyConfigured( res.anthropic_key_configured );
 		setOpenaiKeyConfigured( res.openai_key_configured );
+		setOpenrouterKeyConfigured( res.openrouter_key_configured );
+		setOllamaBaseUrl( res.ollama_base_url );
 		setAnthropicKeyDraft( '' );
 		setOpenaiKeyDraft( '' );
+		setOpenrouterKeyDraft( '' );
 		setStatus( 'API settings saved.' );
 	};
 
 	const resetPet = async () => {
 		if ( ! window.confirm( 'Reset your pet back to an egg?' ) ) return;
-		await apiFetch( {
-			path: '/mochi/v1/reset',
-			method: 'POST',
-		} );
+		await apiFetch( { path: '/mochi/v1/reset', method: 'POST' } );
 		window.dispatchEvent( new CustomEvent( 'mochi:refresh' ) );
 		setStatus( 'Pet reset. Fresh egg incoming.' );
 	};
@@ -177,6 +206,7 @@ export function InspectorPanel() {
 			'⚠️ API keys are stored in wp_options as plaintext. Fine for this local demo. Do not use in production.'
 		),
 
+		// Anthropic
 		createElement( 'label', { style: label }, 'Anthropic API Key' ),
 		createElement( 'input', {
 			type: 'password',
@@ -189,6 +219,7 @@ export function InspectorPanel() {
 				setAnthropicKeyDraft( e.target.value ),
 		} ),
 
+		// OpenAI
 		createElement( 'label', { style: label }, 'OpenAI API Key' ),
 		createElement( 'input', {
 			type: 'password',
@@ -197,6 +228,35 @@ export function InspectorPanel() {
 			value: openaiKeyDraft,
 			onChange: ( e: React.ChangeEvent< HTMLInputElement > ) =>
 				setOpenaiKeyDraft( e.target.value ),
+		} ),
+
+		// OpenRouter
+		createElement( 'label', { style: label }, 'OpenRouter API Key' ),
+		createElement( 'input', {
+			type: 'password',
+			style: input,
+			placeholder: openrouterKeyConfigured
+				? '●●●●●●●● (configured)'
+				: 'sk-or-…',
+			value: openrouterKeyDraft,
+			onChange: ( e: React.ChangeEvent< HTMLInputElement > ) =>
+				setOpenrouterKeyDraft( e.target.value ),
+		} ),
+
+		// Ollama — URL, not a password. Shows current saved value.
+		createElement( 'label', { style: label }, 'Ollama Base URL' ),
+		createElement(
+			'p',
+			{ style: helpText },
+			'Only needed if you picked Ollama as the provider. Default: http://host.docker.internal:11434 (reaches Ollama running on your Mac host from the wp-env container).'
+		),
+		createElement( 'input', {
+			type: 'text',
+			style: input,
+			placeholder: 'http://host.docker.internal:11434',
+			value: ollamaBaseUrl,
+			onChange: ( e: React.ChangeEvent< HTMLInputElement > ) =>
+				setOllamaBaseUrl( e.target.value ),
 		} ),
 
 		createElement(
@@ -296,6 +356,12 @@ const modelNote: React.CSSProperties = {
 	color: '#757575',
 	margin: '0.4rem 0 0',
 	fontStyle: 'italic',
+};
+const helpText: React.CSSProperties = {
+	fontSize: '0.7rem',
+	color: '#757575',
+	margin: '0 0 0.4rem',
+	lineHeight: 1.4,
 };
 const hr: React.CSSProperties = {
 	border: 0,

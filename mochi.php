@@ -18,11 +18,13 @@ const PLUGIN_DIR     = __DIR__;
 const REST_NAMESPACE = 'mochi/v1';
 
 // Option keys.
-const OPT_PET_STATE          = 'mochi_pet_state';
-const OPT_PERSONALITY        = 'mochi_personality';
-const OPT_PROVIDER           = 'mochi_provider';          // 'anthropic' | 'openai'
-const OPT_ANTHROPIC_API_KEY  = 'mochi_anthropic_api_key';
-const OPT_OPENAI_API_KEY     = 'mochi_openai_api_key';
+const OPT_PET_STATE           = 'mochi_pet_state';
+const OPT_PERSONALITY         = 'mochi_personality';
+const OPT_PROVIDER            = 'mochi_provider';          // 'anthropic' | 'openai' | 'ollama' | 'openrouter'
+const OPT_ANTHROPIC_API_KEY   = 'mochi_anthropic_api_key';
+const OPT_OPENAI_API_KEY      = 'mochi_openai_api_key';
+const OPT_OPENROUTER_API_KEY  = 'mochi_openrouter_api_key';
+const OPT_OLLAMA_BASE_URL     = 'mochi_ollama_base_url';
 
 require_once PLUGIN_DIR . '/includes/state.php';
 require_once PLUGIN_DIR . '/includes/ai.php';

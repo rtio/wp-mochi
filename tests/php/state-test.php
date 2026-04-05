@@ -22,6 +22,19 @@ declare( strict_types = 1 );
 // call the functions that touch get_option/update_option.
 require __DIR__ . '/../../includes/state.php';
 
+// Include the AI module so we can test its pure helpers (default_model_for,
+// provider_requires_api_key, clean_line). ai.php's top-level uses `use const`
+// statements that reference constants in the Mochi namespace — define them
+// here via define() so the use-imports resolve without requiring bracketed
+// namespace syntax (which conflicts with the declare(strict_types) above).
+// We never call functions that touch wp_remote_post / get_option / etc.
+define( 'Mochi\OPT_PROVIDER', 'mochi_provider' );
+define( 'Mochi\OPT_ANTHROPIC_API_KEY', 'mochi_anthropic_api_key' );
+define( 'Mochi\OPT_OPENAI_API_KEY', 'mochi_openai_api_key' );
+define( 'Mochi\OPT_OPENROUTER_API_KEY', 'mochi_openrouter_api_key' );
+define( 'Mochi\OPT_OLLAMA_BASE_URL', 'mochi_ollama_base_url' );
+require __DIR__ . '/../../includes/ai.php';
+
 // ────────────────────────────────────────────────────────────────────────
 // Tiny assertion helper (no PHPUnit dependency).
 // ────────────────────────────────────────────────────────────────────────
@@ -377,6 +390,70 @@ check(
 	'same mood+action produces distinct lines per personality',
 	count( array_unique( $shared ) ) === 4
 );
+
+// ────────────────────────────────────────────────────────────────────────
+// AI module — pure helpers (provider dispatch, model defaults, line cleanup)
+// ────────────────────────────────────────────────────────────────────────
+//
+// We only test the pure functions in includes/ai.php — default_model_for,
+// provider_requires_api_key, and clean_line. The HTTP paths (call_anthropic,
+// call_openai, call_ollama, call_openrouter) need wp_remote_post mocking
+// that we've consciously avoided to keep the test runner dependency-free.
+
+group( 'ai — default_model_for' );
+
+use function Mochi\Ai\default_model_for;
+use function Mochi\Ai\provider_requires_api_key;
+use function Mochi\Ai\clean_line;
+
+check(
+	'anthropic default model is non-empty',
+	'' !== default_model_for( 'anthropic' )
+);
+check(
+	'openai default model is non-empty',
+	'' !== default_model_for( 'openai' )
+);
+check(
+	'ollama default model is non-empty',
+	'' !== default_model_for( 'ollama' )
+);
+check(
+	'openrouter default model is non-empty',
+	'' !== default_model_for( 'openrouter' )
+);
+check(
+	'unknown provider falls back to default provider model',
+	default_model_for( 'invalid_provider_id' ) === default_model_for( 'anthropic' )
+);
+check(
+	'each provider has a distinct default model (no accidental duplication)',
+	count( array_unique( array(
+		default_model_for( 'anthropic' ),
+		default_model_for( 'openai' ),
+		default_model_for( 'ollama' ),
+		default_model_for( 'openrouter' ),
+	) ) ) === 4
+);
+
+group( 'ai — provider_requires_api_key' );
+
+check( 'anthropic requires a key', provider_requires_api_key( 'anthropic' ) === true );
+check( 'openai requires a key', provider_requires_api_key( 'openai' ) === true );
+check( 'openrouter requires a key', provider_requires_api_key( 'openrouter' ) === true );
+check( 'ollama does NOT require a key', provider_requires_api_key( 'ollama' ) === false );
+check( 'unknown providers do not require a key', provider_requires_api_key( 'invalid' ) === false );
+
+group( 'ai — clean_line' );
+
+eq( 'trims whitespace', 'hello', clean_line( '  hello  ' ) );
+eq( 'strips straight double quotes', 'hello', clean_line( '"hello"' ) );
+eq( 'strips straight single quotes', 'hello', clean_line( "'hello'" ) );
+eq( 'strips curly quotes', 'hello', clean_line( "\u{201C}hello\u{201D}" ) );
+eq( 'returns null for empty string', null, clean_line( '' ) );
+eq( 'returns null for whitespace-only string', null, clean_line( "   \n  " ) );
+eq( 'does not strip quotes from the middle of a line', 'say "hi"', clean_line( '  say "hi"  ' ) );
+eq( 'strips only ONE layer of wrapping quotes', '"inner"', clean_line( '""inner""' ) );
 
 // ────────────────────────────────────────────────────────────────────────
 // Summary

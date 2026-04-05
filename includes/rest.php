@@ -20,6 +20,8 @@ use const Mochi\Ai\PROVIDERS;
 use const Mochi\OPT_PROVIDER;
 use const Mochi\OPT_ANTHROPIC_API_KEY;
 use const Mochi\OPT_OPENAI_API_KEY;
+use const Mochi\OPT_OPENROUTER_API_KEY;
+use const Mochi\OPT_OLLAMA_BASE_URL;
 use const Mochi\OPT_PERSONALITY;
 use const Mochi\OPT_PET_STATE;
 use const Mochi\REST_NAMESPACE;
@@ -77,21 +79,29 @@ function register_routes(): void {
 			'permission_callback' => __NAMESPACE__ . '\\can_manage',
 			'callback'            => __NAMESPACE__ . '\\handle_settings',
 			'args'                => array(
-				'personality'       => array(
+				'personality'        => array(
 					'required' => false,
 					'type'     => 'string',
 					'enum'     => PERSONALITIES,
 				),
-				'provider'          => array(
+				'provider'           => array(
 					'required' => false,
 					'type'     => 'string',
 					'enum'     => PROVIDERS,
 				),
-				'anthropic_api_key' => array(
+				'anthropic_api_key'  => array(
 					'required' => false,
 					'type'     => 'string',
 				),
-				'openai_api_key'    => array(
+				'openai_api_key'     => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+				'openrouter_api_key' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+				'ollama_base_url'    => array(
 					'required' => false,
 					'type'     => 'string',
 				),
@@ -105,10 +115,14 @@ function handle_get_state( \WP_REST_Request $request ): \WP_REST_Response {
 
 	return new \WP_REST_Response(
 		array(
-			'state'                    => $state,
-			'provider'                 => (string) get_option( OPT_PROVIDER, 'anthropic' ),
-			'anthropic_key_configured' => (bool) get_option( OPT_ANTHROPIC_API_KEY, '' ),
-			'openai_key_configured'    => (bool) get_option( OPT_OPENAI_API_KEY, '' ),
+			'state'                     => $state,
+			'provider'                  => (string) get_option( OPT_PROVIDER, 'anthropic' ),
+			'anthropic_key_configured'  => (bool) get_option( OPT_ANTHROPIC_API_KEY, '' ),
+			'openai_key_configured'     => (bool) get_option( OPT_OPENAI_API_KEY, '' ),
+			'openrouter_key_configured' => (bool) get_option( OPT_OPENROUTER_API_KEY, '' ),
+			// Ollama base URL is NOT a secret — return the actual value
+			// (empty string means "use the default host.docker.internal:11434").
+			'ollama_base_url'           => (string) get_option( OPT_OLLAMA_BASE_URL, '' ),
 		)
 	);
 }
@@ -143,10 +157,12 @@ function handle_reset( \WP_REST_Request $request ): \WP_REST_Response {
 }
 
 function handle_settings( \WP_REST_Request $request ): \WP_REST_Response {
-	$personality       = $request->get_param( 'personality' );
-	$provider          = $request->get_param( 'provider' );
-	$anthropic_api_key = $request->get_param( 'anthropic_api_key' );
-	$openai_api_key    = $request->get_param( 'openai_api_key' );
+	$personality        = $request->get_param( 'personality' );
+	$provider           = $request->get_param( 'provider' );
+	$anthropic_api_key  = $request->get_param( 'anthropic_api_key' );
+	$openai_api_key     = $request->get_param( 'openai_api_key' );
+	$openrouter_api_key = $request->get_param( 'openrouter_api_key' );
+	$ollama_base_url    = $request->get_param( 'ollama_base_url' );
 
 	if ( null !== $personality ) {
 		update_option( OPT_PERSONALITY, $personality, false );
@@ -162,7 +178,7 @@ function handle_settings( \WP_REST_Request $request ): \WP_REST_Response {
 		update_option( OPT_PROVIDER, $provider, false );
 	}
 
-	// Plaintext in wp_options — fine for local demo, NOT production.
+	// API keys: plaintext in wp_options — fine for local demo, NOT production.
 	// See AGENTS.md and the settings UI for the user-facing warning.
 	if ( null !== $anthropic_api_key ) {
 		update_option( OPT_ANTHROPIC_API_KEY, $anthropic_api_key, false );
@@ -170,13 +186,23 @@ function handle_settings( \WP_REST_Request $request ): \WP_REST_Response {
 	if ( null !== $openai_api_key ) {
 		update_option( OPT_OPENAI_API_KEY, $openai_api_key, false );
 	}
+	if ( null !== $openrouter_api_key ) {
+		update_option( OPT_OPENROUTER_API_KEY, $openrouter_api_key, false );
+	}
+
+	// Ollama base URL: not a secret. Stored as-is, readable over REST.
+	if ( null !== $ollama_base_url ) {
+		update_option( OPT_OLLAMA_BASE_URL, $ollama_base_url, false );
+	}
 
 	return new \WP_REST_Response(
 		array(
-			'personality'              => get_option( OPT_PERSONALITY, 'grumpy' ),
-			'provider'                 => (string) get_option( OPT_PROVIDER, 'anthropic' ),
-			'anthropic_key_configured' => (bool) get_option( OPT_ANTHROPIC_API_KEY, '' ),
-			'openai_key_configured'    => (bool) get_option( OPT_OPENAI_API_KEY, '' ),
+			'personality'               => get_option( OPT_PERSONALITY, 'grumpy' ),
+			'provider'                  => (string) get_option( OPT_PROVIDER, 'anthropic' ),
+			'anthropic_key_configured'  => (bool) get_option( OPT_ANTHROPIC_API_KEY, '' ),
+			'openai_key_configured'     => (bool) get_option( OPT_OPENAI_API_KEY, '' ),
+			'openrouter_key_configured' => (bool) get_option( OPT_OPENROUTER_API_KEY, '' ),
+			'ollama_base_url'           => (string) get_option( OPT_OLLAMA_BASE_URL, '' ),
 		)
 	);
 }
