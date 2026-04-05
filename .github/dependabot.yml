@@ -1,0 +1,31 @@
+version: 2
+updates:
+  # npm / pnpm dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      # @wordpress/* packages move in lockstep; group them into one PR
+      # so we don't get 10+ separate bumps that all need to land together.
+      wordpress-packages:
+        patterns:
+          - "@wordpress/*"
+      # Group minor + patch updates for dev tooling to reduce PR noise.
+      dev-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+        exclude-patterns:
+          - "@wordpress/*"
+
+  # GitHub Actions versions in .github/workflows/
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3

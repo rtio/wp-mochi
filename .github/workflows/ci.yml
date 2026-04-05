@@ -44,8 +44,16 @@ jobs:
       - name: Lint PHP (syntax)
         run: pnpm run lint:php
 
-      - name: Run TypeScript tests
-        run: pnpm test:ts
+      - name: Run TypeScript tests with coverage
+        run: pnpm run test:coverage
 
       - name: Run PHP tests (state machine parity)
         run: pnpm test:php
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-coverage
+          path: coverage/
+          retention-days: 14

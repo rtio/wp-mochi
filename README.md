@@ -18,6 +18,19 @@ Built primarily as a sandbox for the new [`@wordpress/build`](https://www.npmjs.
 
 Pre-v1, experimental. Don't run this on a production WordPress site — the Anthropic API key is stored in `wp_options` as plaintext (documented in the settings UI), and there are gaps that would need filling before anything resembling a wordpress.org release. See [AGENTS.md](AGENTS.md) for the full architecture contract and the known-gaps list.
 
+## Screenshots
+
+<!-- Screenshots pending — see docs/screenshots/README.md for instructions
+     on capturing them from a working dev environment. Once captured,
+     reference them here:
+
+     ![Mochi in the admin corner](docs/screenshots/stage.png)
+     ![Settings page](docs/screenshots/settings.png)
+     ![Final form variants](docs/screenshots/final-forms.png)
+-->
+
+For now, imagine a pink pixel robot squatting in the bottom-right corner of your wp-admin, judging your drafts.
+
 ## Install (end user)
 
 Download the latest `mochi-vX.Y.Z.zip` from the [Releases page](../../releases/latest), then in `wp-admin`:

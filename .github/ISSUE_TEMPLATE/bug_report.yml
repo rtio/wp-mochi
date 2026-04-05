@@ -1,0 +1,75 @@
+name: Bug report
+description: Report a problem with Mochi
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please fill out the fields below.
+        For questions about setup or usage, prefer Discussions over Issues.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected to happen instead.
+      placeholder: "When I clicked Feed, the speech bubble showed ... but I expected ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps that reliably reproduce the bug.
+      placeholder: |
+        1. Install Mochi v0.1.0
+        2. Activate the plugin
+        3. Click Feed five times
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: input
+    id: wp-version
+    attributes:
+      label: WordPress version
+      placeholder: "6.5"
+    validations:
+      required: false
+
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version
+      placeholder: "8.2"
+    validations:
+      required: false
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser (if UI bug)
+      placeholder: "Chrome 120, Safari 17, ..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Browser console / PHP error log excerpts
+      description: Any relevant errors or stack traces.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I've searched existing issues for duplicates
+          required: true
+        - label: I've verified this reproduces on the latest release
+          required: false
