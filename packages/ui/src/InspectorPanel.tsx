@@ -48,7 +48,7 @@ type Provider = 'anthropic' | 'openai' | 'ollama' | 'openrouter';
 const PROVIDERS: Array< { id: Provider; label: string; model: string } > = [
 	{ id: 'anthropic',  label: 'Anthropic (Claude)', model: 'claude-haiku-4-5' },
 	{ id: 'openai',     label: 'OpenAI (GPT)',       model: 'gpt-4o-mini' },
-	{ id: 'ollama',     label: 'Ollama (local)',     model: 'llama3.2:3b' },
+	{ id: 'ollama',     label: 'Ollama (local)',     model: 'llama3.2:1b' },
 	{ id: 'openrouter', label: 'OpenRouter',         model: 'deepseek/deepseek-chat' },
 ];
 

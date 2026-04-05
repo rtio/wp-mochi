@@ -54,12 +54,21 @@ const DEFAULT_PROVIDER = 'anthropic';
  *
  *   anthropic  — claude-haiku-4-5 ($1/MTok in, $5/MTok out)
  *   openai     — gpt-4o-mini ($0.15/MTok in, $0.60/MTok out)
- *   ollama     — llama3.2:3b (free, local, ~2 GB of RAM)
+ *   ollama     — llama3.2:1b (free, local, ~1.3 GB disk, ~2 GB RAM)
  *   openrouter — deepseek/deepseek-chat (~$0.14/MTok in, $0.28/MTok out)
  *
  * For speech bubbles, a typical interaction is ~400 input tokens
  * (system prompt + state) and ~120 output tokens. Cost per interaction
  * is fractions of a cent on any provider; free on Ollama.
+ *
+ * Ollama model choice: llama3.2:1b is Meta's smallest chat-tuned Llama
+ * (1 billion parameters). At this size the model reliably follows our
+ * persona system prompt while running fast on CPU alone — no GPU
+ * needed. If you want to push smaller, qwen2.5:0.5b (500M params,
+ * ~400 MB) is the next viable rung down, though persona adherence
+ * gets less reliable below ~1B params. smollm2:360m is probably the
+ * smallest that still produces in-character output for this prompt,
+ * and it's a coin flip on any given interaction.
  *
  * OpenRouter also has free-tier models (look for ":free" suffix in
  * their catalog). If you want a free-for-free setup, change the
@@ -69,7 +78,7 @@ const DEFAULT_PROVIDER = 'anthropic';
 const MODELS = array(
 	'anthropic'  => 'claude-haiku-4-5-20251001',
 	'openai'     => 'gpt-4o-mini',
-	'ollama'     => 'llama3.2:3b',
+	'ollama'     => 'llama3.2:1b',
 	'openrouter' => 'deepseek/deepseek-chat',
 );
 
