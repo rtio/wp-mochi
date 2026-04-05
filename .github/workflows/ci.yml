@@ -16,9 +16,9 @@ jobs:
 
       - name: Setup pnpm
         # Version comes from the "packageManager" field in package.json —
-        # pnpm/action-setup@v4 reads it automatically and errors if you also
+        # pnpm/action-setup@v5 reads it automatically and errors if you also
         # pass a `version:` input here.
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
