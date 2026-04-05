@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Build, typecheck, lint, test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (@wordpress/build)
+        run: pnpm run build
+
+      - name: TypeScript type check
+        run: pnpm run typecheck
+
+      - name: Lint PHP (syntax)
+        run: pnpm run lint:php
+
+      - name: Run TypeScript tests
+        run: pnpm test:ts
+
+      - name: Run PHP tests (state machine parity)
+        run: pnpm test:php

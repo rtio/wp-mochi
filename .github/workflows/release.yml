@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run full test suite
+        run: pnpm test
+
+      - name: Type check
+        run: pnpm run typecheck
+
+      - name: Build (@wordpress/build)
+        run: pnpm run build
+
+      - name: Package plugin for WordPress
+        # The zip contains JUST the runtime files a WP site needs: plugin
+        # bootstrap, PHP includes, and the built JS/CSS assets. No source,
+        # no node_modules, no tests, no dev tooling. Extracts to /mochi/
+        # so drag-and-drop upload in wp-admin → Add Plugin works.
+        run: |
+          mkdir -p dist/mochi
+          cp mochi.php dist/mochi/
+          cp README.md dist/mochi/
+          cp LICENSE dist/mochi/
+          cp -r includes dist/mochi/
+          cp -r build dist/mochi/
+          cd dist && zip -rq "mochi-${GITHUB_REF_NAME}.zip" mochi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/mochi-*.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false

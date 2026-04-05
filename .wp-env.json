@@ -1,0 +1,7 @@
+{
+	"plugins": [ "." ],
+	"testsEnvironment": false,
+	"lifecycleScripts": {
+		"afterStart": "wp-env run cli wp plugin activate demo"
+	}
+}

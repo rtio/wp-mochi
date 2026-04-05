@@ -1,0 +1,227 @@
+[
+	{
+		"name": "feed from neutral: happiness +5, hunger -30",
+		"input": {
+			"species": "chickenoid",
+			"stage": "egg",
+			"happiness": 60,
+			"hunger": 50,
+			"age_ticks": 0,
+			"cumulative_happiness": 0,
+			"personality": "grumpy",
+			"last_interaction": 0,
+			"last_action": null
+		},
+		"action": "feed",
+		"expected_state": {
+			"happiness": 65,
+			"hunger": 20,
+			"age_ticks": 1,
+			"cumulative_happiness": 65,
+			"last_action": "feed",
+			"stage": "egg"
+		},
+		"expected_evolved": false,
+		"expected_previous_stage": null
+	},
+	{
+		"name": "overfeeding at hunger 0: happiness -5 instead of +5",
+		"input": {
+			"species": "chickenoid",
+			"stage": "hatchling",
+			"happiness": 70,
+			"hunger": 0,
+			"age_ticks": 3,
+			"cumulative_happiness": 200,
+			"personality": "grumpy",
+			"last_interaction": 0,
+			"last_action": "feed"
+		},
+		"action": "feed",
+		"expected_state": {
+			"happiness": 65,
+			"hunger": 0,
+			"age_ticks": 4,
+			"cumulative_happiness": 265,
+			"last_action": "feed",
+			"stage": "hatchling"
+		},
+		"expected_evolved": false,
+		"expected_previous_stage": null
+	},
+	{
+		"name": "pet normal: happiness +10, hunger +2",
+		"input": {
+			"species": "chickenoid",
+			"stage": "chick",
+			"happiness": 60,
+			"hunger": 30,
+			"age_ticks": 7,
+			"cumulative_happiness": 420,
+			"personality": "chipper",
+			"last_interaction": 0,
+			"last_action": "ignore"
+		},
+		"action": "pet",
+		"expected_state": {
+			"happiness": 70,
+			"hunger": 32,
+			"age_ticks": 8,
+			"cumulative_happiness": 490,
+			"last_action": "pet",
+			"stage": "chick"
+		},
+		"expected_evolved": false,
+		"expected_previous_stage": null
+	},
+	{
+		"name": "pet ecstatic bonus: +15 at happiness 90, clamp at 100",
+		"input": {
+			"species": "chickenoid",
+			"stage": "chick",
+			"happiness": 90,
+			"hunger": 30,
+			"age_ticks": 5,
+			"cumulative_happiness": 350,
+			"personality": "chipper",
+			"last_interaction": 0,
+			"last_action": "pet"
+		},
+		"action": "pet",
+		"expected_state": {
+			"happiness": 100,
+			"hunger": 32,
+			"age_ticks": 6,
+			"cumulative_happiness": 450,
+			"last_action": "pet",
+			"stage": "chick"
+		},
+		"expected_evolved": false,
+		"expected_previous_stage": null
+	},
+	{
+		"name": "ignore normal: happiness -10, hunger +10",
+		"input": {
+			"species": "chickenoid",
+			"stage": "chick",
+			"happiness": 60,
+			"hunger": 30,
+			"age_ticks": 5,
+			"cumulative_happiness": 300,
+			"personality": "deadpan",
+			"last_interaction": 0,
+			"last_action": "feed"
+		},
+		"action": "ignore",
+		"expected_state": {
+			"happiness": 50,
+			"hunger": 40,
+			"age_ticks": 6,
+			"cumulative_happiness": 350,
+			"last_action": "ignore",
+			"stage": "chick"
+		},
+		"expected_evolved": false,
+		"expected_previous_stage": null
+	},
+	{
+		"name": "starving penalty: ignore at hunger 85 applies extra -5",
+		"input": {
+			"species": "chickenoid",
+			"stage": "hatchling",
+			"happiness": 60,
+			"hunger": 85,
+			"age_ticks": 3,
+			"cumulative_happiness": 180,
+			"personality": "dramatic",
+			"last_interaction": 0,
+			"last_action": "ignore"
+		},
+		"action": "ignore",
+		"expected_state": {
+			"happiness": 45,
+			"hunger": 95,
+			"age_ticks": 4,
+			"cumulative_happiness": 225,
+			"last_action": "ignore",
+			"stage": "hatchling"
+		},
+		"expected_evolved": false,
+		"expected_previous_stage": null
+	},
+	{
+		"name": "egg → hatchling: step from age 1 triggers evolution at age 2",
+		"input": {
+			"species": "chickenoid",
+			"stage": "egg",
+			"happiness": 60,
+			"hunger": 20,
+			"age_ticks": 1,
+			"cumulative_happiness": 60,
+			"personality": "grumpy",
+			"last_interaction": 0,
+			"last_action": "feed"
+		},
+		"action": "pet",
+		"expected_state": {
+			"happiness": 70,
+			"hunger": 22,
+			"age_ticks": 2,
+			"cumulative_happiness": 130,
+			"last_action": "pet",
+			"stage": "hatchling"
+		},
+		"expected_evolved": true,
+		"expected_previous_stage": "egg"
+	},
+	{
+		"name": "chick → chonk: threshold met (age 10, avg >= 60)",
+		"input": {
+			"species": "chickenoid",
+			"stage": "chick",
+			"happiness": 75,
+			"hunger": 20,
+			"age_ticks": 9,
+			"cumulative_happiness": 620,
+			"personality": "chipper",
+			"last_interaction": 0,
+			"last_action": "feed"
+		},
+		"action": "pet",
+		"expected_state": {
+			"happiness": 85,
+			"hunger": 22,
+			"age_ticks": 10,
+			"cumulative_happiness": 705,
+			"last_action": "pet",
+			"stage": "chonk"
+		},
+		"expected_evolved": true,
+		"expected_previous_stage": "chick"
+	},
+	{
+		"name": "final_form is terminal: no further evolution",
+		"input": {
+			"species": "chickenoid",
+			"stage": "final_form",
+			"happiness": 90,
+			"hunger": 20,
+			"age_ticks": 50,
+			"cumulative_happiness": 4000,
+			"personality": "dramatic",
+			"last_interaction": 0,
+			"last_action": "feed"
+		},
+		"action": "pet",
+		"expected_state": {
+			"happiness": 100,
+			"hunger": 22,
+			"age_ticks": 51,
+			"cumulative_happiness": 4100,
+			"last_action": "pet",
+			"stage": "final_form"
+		},
+		"expected_evolved": false,
+		"expected_previous_stage": null
+	}
+]
