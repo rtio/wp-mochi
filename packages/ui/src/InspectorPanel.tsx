@@ -1,9 +1,17 @@
 /**
- * Mochi — inspector panel component.
+ * Mochi — inspector panel component (settings page).
  *
- * Settings: personality picker, Anthropic API key entry (write-only from
- * the client's POV), reset button. The API key is never read back through
- * the REST API; only a boolean `api_key_configured` is exposed.
+ * Settings:
+ *   - Personality picker (auto-saves on change — affects live pet rendering)
+ *   - AI provider picker (Anthropic / OpenAI)
+ *   - API key entry per provider — write-only from the client's POV;
+ *     the REST API exposes only a boolean "configured" status, never the key
+ *   - Show pet / Reset pet buttons
+ *
+ * Model selection is deliberately absent: the server always uses the
+ * cheapest-tier model per provider (Haiku 4.5 for Anthropic, gpt-4o-mini
+ * for OpenAI). For 120-token speech bubbles there's no realistic gain
+ * from paying more. See includes/ai.php for the hardcoded model IDs.
  *
  * See docs/MIGRATION-TO-ROUTES.md — this component is unchanged between
  * classic and routes/ layouts.
@@ -21,28 +29,54 @@ const PERSONALITIES: Personality[] = [
 	'dramatic',
 ];
 
+type Provider = 'anthropic' | 'openai';
+
+const PROVIDERS: Array< { id: Provider; label: string; model: string } > = [
+	{
+		id: 'anthropic',
+		label: 'Anthropic (Claude)',
+		model: 'claude-haiku-4-5',
+	},
+	{
+		id: 'openai',
+		label: 'OpenAI (GPT)',
+		model: 'gpt-4o-mini',
+	},
+];
+
 interface StateResponse {
 	state: { personality: Personality };
-	api_key_configured: boolean;
+	provider: Provider;
+	anthropic_key_configured: boolean;
+	openai_key_configured: boolean;
 }
 
 interface SettingsResponse {
 	personality: Personality;
-	api_key_configured: boolean;
+	provider: Provider;
+	anthropic_key_configured: boolean;
+	openai_key_configured: boolean;
 }
 
 export function InspectorPanel() {
 	const [ personality, setPersonality ] =
 		useState< Personality >( 'grumpy' );
-	const [ keyConfigured, setKeyConfigured ] = useState< boolean >( false );
-	const [ keyDraft, setKeyDraft ] = useState< string >( '' );
+	const [ provider, setProvider ] = useState< Provider >( 'anthropic' );
+	const [ anthropicKeyConfigured, setAnthropicKeyConfigured ] =
+		useState< boolean >( false );
+	const [ openaiKeyConfigured, setOpenaiKeyConfigured ] =
+		useState< boolean >( false );
+	const [ anthropicKeyDraft, setAnthropicKeyDraft ] = useState< string >( '' );
+	const [ openaiKeyDraft, setOpenaiKeyDraft ] = useState< string >( '' );
 	const [ status, setStatus ] = useState< string >( '' );
 
 	useEffect( () => {
 		apiFetch< StateResponse >( { path: '/mochi/v1/state' } ).then(
 			( res ) => {
 				setPersonality( res.state.personality );
-				setKeyConfigured( res.api_key_configured );
+				setProvider( res.provider );
+				setAnthropicKeyConfigured( res.anthropic_key_configured );
+				setOpenaiKeyConfigured( res.openai_key_configured );
 			}
 		);
 	}, [] );
@@ -57,16 +91,26 @@ export function InspectorPanel() {
 		setStatus( 'Personality saved.' );
 	};
 
-	const saveKey = async () => {
-		if ( ! keyDraft ) return;
+	const saveApiSettings = async () => {
+		// Only send fields the user actually touched. Empty key drafts are
+		// ignored so clicking Save after only changing the provider doesn't
+		// clobber a previously-saved key with an empty string.
+		const data: Record< string, string > = { provider };
+		if ( anthropicKeyDraft ) data.anthropic_api_key = anthropicKeyDraft;
+		if ( openaiKeyDraft ) data.openai_api_key = openaiKeyDraft;
+
 		const res = await apiFetch< SettingsResponse >( {
 			path: '/mochi/v1/settings',
 			method: 'POST',
-			data: { api_key: keyDraft },
+			data,
 		} );
-		setKeyConfigured( res.api_key_configured );
-		setKeyDraft( '' );
-		setStatus( 'API key saved.' );
+
+		setProvider( res.provider );
+		setAnthropicKeyConfigured( res.anthropic_key_configured );
+		setOpenaiKeyConfigured( res.openai_key_configured );
+		setAnthropicKeyDraft( '' );
+		setOpenaiKeyDraft( '' );
+		setStatus( 'API settings saved.' );
 	};
 
 	const resetPet = async () => {
@@ -75,17 +119,17 @@ export function InspectorPanel() {
 			path: '/mochi/v1/reset',
 			method: 'POST',
 		} );
-		// Tell the floating widget to refetch.
 		window.dispatchEvent( new CustomEvent( 'mochi:refresh' ) );
 		setStatus( 'Pet reset. Fresh egg incoming.' );
 	};
 
 	const showPet = () => {
-		// Whether or not it's currently hidden, dispatching show is a no-op
-		// if the widget is already visible. Safer than reading localStorage here.
 		window.dispatchEvent( new CustomEvent( 'mochi:show' ) );
 		setStatus( 'Pet is visible in the bottom-right corner.' );
 	};
+
+	const activeModel =
+		PROVIDERS.find( ( p ) => p.id === provider )?.model ?? '';
 
 	return createElement(
 		'div',
@@ -106,31 +150,59 @@ export function InspectorPanel() {
 			)
 		),
 
-		createElement( 'label', { style: label }, 'Anthropic API Key' ),
+		createElement( 'hr', { style: hr } ),
+
+		createElement( 'label', { style: label }, 'AI Provider' ),
+		createElement(
+			'select',
+			{
+				style: select,
+				value: provider,
+				onChange: ( e: React.ChangeEvent< HTMLSelectElement > ) =>
+					setProvider( e.target.value as Provider ),
+			},
+			PROVIDERS.map( ( p ) =>
+				createElement( 'option', { key: p.id, value: p.id }, p.label )
+			)
+		),
+		createElement(
+			'p',
+			{ style: modelNote },
+			`Using ${ activeModel } (cheapest tier — we don't need more for 120-token speech bubbles).`
+		),
+
 		createElement(
 			'p',
 			{ style: warning },
-			'⚠️ Stored in wp_options as plaintext. Fine for this local demo. Do not use in production.'
+			'⚠️ API keys are stored in wp_options as plaintext. Fine for this local demo. Do not use in production.'
 		),
+
+		createElement( 'label', { style: label }, 'Anthropic API Key' ),
+		createElement( 'input', {
+			type: 'password',
+			style: input,
+			placeholder: anthropicKeyConfigured
+				? '●●●●●●●● (configured)'
+				: 'sk-ant-…',
+			value: anthropicKeyDraft,
+			onChange: ( e: React.ChangeEvent< HTMLInputElement > ) =>
+				setAnthropicKeyDraft( e.target.value ),
+		} ),
+
+		createElement( 'label', { style: label }, 'OpenAI API Key' ),
+		createElement( 'input', {
+			type: 'password',
+			style: input,
+			placeholder: openaiKeyConfigured ? '●●●●●●●● (configured)' : 'sk-…',
+			value: openaiKeyDraft,
+			onChange: ( e: React.ChangeEvent< HTMLInputElement > ) =>
+				setOpenaiKeyDraft( e.target.value ),
+		} ),
+
 		createElement(
-			'div',
-			{ style: row },
-			createElement( 'input', {
-				key: 'input',
-				type: 'password',
-				style: input,
-				placeholder: keyConfigured
-					? '●●●●●●●● (configured)'
-					: 'sk-ant-…',
-				value: keyDraft,
-				onChange: ( e: React.ChangeEvent< HTMLInputElement > ) =>
-					setKeyDraft( e.target.value ),
-			} ),
-			createElement(
-				'button',
-				{ key: 'save', style: button, onClick: saveKey },
-				'Save'
-			)
+			'button',
+			{ style: saveButton, onClick: saveApiSettings },
+			'Save API settings'
 		),
 
 		createElement( 'hr', { style: hr } ),
@@ -178,16 +250,12 @@ const select: React.CSSProperties = {
 	border: '1px solid #dcdcde',
 };
 const input: React.CSSProperties = {
-	flex: 1,
+	width: '100%',
 	padding: '0.5rem',
 	borderRadius: 6,
 	border: '1px solid #dcdcde',
 	fontFamily: 'monospace',
-};
-const row: React.CSSProperties = {
-	display: 'flex',
-	gap: '0.5rem',
-	alignItems: 'center',
+	boxSizing: 'border-box',
 };
 const button: React.CSSProperties = {
 	padding: '0.5rem 0.9rem',
@@ -196,6 +264,11 @@ const button: React.CSSProperties = {
 	background: '#1e1e1e',
 	color: '#fff',
 	cursor: 'pointer',
+};
+const saveButton: React.CSSProperties = {
+	...button,
+	width: '100%',
+	marginTop: '1rem',
 };
 const secondary: React.CSSProperties = {
 	...button,
@@ -216,7 +289,13 @@ const warning: React.CSSProperties = {
 	border: '1px solid #f1d982',
 	borderRadius: 6,
 	padding: '0.5rem 0.75rem',
-	margin: '0 0 0.5rem',
+	margin: '0.8rem 0 0.5rem',
+};
+const modelNote: React.CSSProperties = {
+	fontSize: '0.72rem',
+	color: '#757575',
+	margin: '0.4rem 0 0',
+	fontStyle: 'italic',
 };
 const hr: React.CSSProperties = {
 	border: 0,

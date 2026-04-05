@@ -336,12 +336,14 @@ interface InteractResponse {
 	evolved: boolean;
 	previous_stage: Stage | null;
 	line: string;
-	source: 'stub' | 'anthropic';
+	source: 'stub' | 'anthropic' | 'openai';
 }
 
 interface StateResponse {
 	state: PetState;
-	api_key_configured: boolean;
+	provider: 'anthropic' | 'openai';
+	anthropic_key_configured: boolean;
+	openai_key_configured: boolean;
 }
 
 export function StagePanel() {
