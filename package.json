@@ -25,13 +25,13 @@
   },
   "devDependencies": {
     "@mochi/state": "workspace:*",
-    "@types/react": "^19.2.14",
+    "@types/react": "^19.2.15",
     "@vitest/coverage-v8": "^3",
     "@wordpress/api-fetch": "^7.43.0",
     "@wordpress/build": "^0.11.0",
     "@wordpress/element": "^6.43.0",
     "@wordpress/env": "^11.3.0",
-    "typescript": "^6.0.2",
+    "typescript": "^6.0.3",
     "vitest": "^3"
   },
   "volta": {
